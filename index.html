@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giáo Trình Tương Tác: Arduino & mBlock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: "Educational Teal" - A calming and professional palette using Slate gray for text, a light Beige/Gray for the background, and Teal as the primary accent for interactive elements, creating a focused and academic feel. -->
+    <!-- Application Structure Plan: The application is structured as a single-page dashboard with three main thematic sections corresponding to the curriculum's parts: "Nền tảng", "Cảm biến", and "Robot". This top-down structure provides an immediate overview of the entire learning path. Within each section, lessons are presented as interactive "project cards". Clicking a card expands an accordion-style detail panel below it, revealing objectives, materials, diagrams, and code. This structure was chosen for its intuitive, hierarchical navigation, allowing users to explore content without leaving the page, which is ideal for quick reference and maintaining context during a class or lab session. -->
+    <!-- Visualization & Content Choices: The primary "visualization" method is the structured layout of interactive cards and expanding panels, which organizes the curriculum information effectively. Goal: Organize & Inform. Method: HTML/CSS grid for cards, JS for accordion interaction. Interaction: Click to expand/collapse. Justification: This is more suitable for textual/instructional content than traditional charts. Data charts (Chart.js/Plotly.js) were deemed inappropriate as the source material is a curriculum, not a dataset with quantitative values to plot. The focus is on presenting structured information (code, materials, instructions) clearly. Code blocks are presented with a copy-to-clipboard function for usability. Diagrams are represented by placeholders, as requested for complex visuals that cannot be recreated with HTML/CSS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        .project-card {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .project-card.active {
+            border-color: #14b8a6; /* Teal-500 */
+        }
+        .details-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s ease-in-out, padding 0.7s ease-in-out;
+            padding: 0 1.5rem;
+        }
+        .details-panel.open {
+            max-height: 2500px; /* Large enough for content */
+            padding: 1.5rem 1.5rem;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        pre:hover .copy-btn {
+            opacity: 1;
+        }
+        .copy-btn:active {
+            background-color: #2d3748;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e5e7eb;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 py-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Giáo Trình Tương Tác</h1>
+            <p class="text-lg text-teal-600 font-semibold">Lập Trình Sáng Tạo với Arduino & mBlock</p>
+        </header>
+
+        <section class="bg-white p-8 rounded-lg shadow-md mb-12">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Giới Thiệu Chương Trình Học</h2>
+            <div class="space-y-4 text-gray-700">
+                <p>Chào mừng bạn đến với chương trình học "Lập Trình Sáng Tạo với Arduino & mBlock", một hành trình khám phá được xây dựng dựa trên triết lý giáo dục hiện đại: học tập qua dự án (Project-Based Learning), lấy học sinh làm trung tâm và tích hợp liên môn theo tiêu chuẩn STEAM (Khoa học, Công nghệ, Kỹ thuật, Nghệ thuật, Toán học).</p>
+                <p><strong class="text-teal-700">Triết lý giáo dục:</strong> Chúng tôi tin rằng kiến thức bền vững nhất đến từ trải nghiệm thực tế. Thay vì chỉ học lý thuyết, học sinh sẽ được "học bằng cách làm" (learning by doing), tự tay xây dựng các sản phẩm từ đơn giản đến phức tạp. Mỗi dự án là một bài toán thực tế, khuyến khích học sinh suy nghĩ, thử nghiệm, thất bại và học hỏi từ sai lầm, qua đó xây dựng sự tự tin và khả năng giải quyết vấn đề một cách độc lập.</p>
+                <p><strong class="text-teal-700">Mục tiêu & Ý nghĩa:</strong> Mục tiêu cốt lõi của khóa học là trang bị cho học sinh không chỉ kiến thức về điện tử và lập trình, mà quan trọng hơn là bộ kỹ năng 4C của thế kỷ 21: Tư duy Phản biện (Critical Thinking), Sáng tạo (Creativity), Hợp tác (Collaboration), và Giao tiếp (Communication). Chương trình này không chỉ tạo ra những người biết lập trình, mà còn vun đắp nên những nhà sáng tạo, những người có khả năng biến ý tưởng thành hiện thực và sẵn sàng đối mặt với những thách thức của tương lai công nghệ.</p>
+            </div>
+        </section>
+
+        <nav class="flex justify-center space-x-4 md:space-x-8 mb-12 sticky top-4 z-10 bg-gray-100/80 backdrop-blur-sm p-4 rounded-full shadow-sm">
+            <a href="#part1" class="text-gray-600 hover:text-teal-600 font-medium transition">Phần 1: Nền tảng</a>
+            <a href="#part2" class="text-gray-600 hover:text-teal-600 font-medium transition">Phần 2: Cảm biến</a>
+            <a href="#part3" class="text-gray-600 hover:text-teal-600 font-medium transition">Phần 3: Robot</a>
+        </nav>
+
+        <main id="curriculum-content">
+            <!-- Content will be dynamically generated by JavaScript -->
+        </main>
+
+        <footer class="text-center mt-16 text-gray-500 text-sm">
+            <p>Được thiết kế cho chương trình giảng dạy STEAM.</p>
+            <p>Designed by Nhat Phan. &copy; 2025.</p>
+        </footer>
+
+    </div>
+
+    <script>
+    const curriculumData = [
+        // PART 1
+        {
+            part: 1,
+            title: "Buổi 1: LED Nhấp Nháy",
+            icon: "💡",
+            description: "Bước đầu tiên vào thế giới điện tử. Học cách làm cho đèn LED sáng và điều khiển nó.",
+            objectives: [
+                "Hiểu cấu trúc cơ bản của một chương trình Arduino: `setup()` và `loop()`.",
+                "Biết cách lắp một mạch điện đơn giản trên breadboard.",
+                "Lập trình để điều khiển một đầu ra kỹ thuật số (digital output)."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Đèn LED 5mm", qty: 1 },
+                { item: "Điện trở 220Ω", qty: 1 },
+                { item: "Breadboard", qty: 1 },
+                { item: "Dây cắm", qty: 2 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+mạch+LED",
+            mblock: {
+                description: "Chương trình bắt đầu khi Arduino khởi động, sau đó trong vòng lặp mãi mãi, bật đèn ở chân 13, chờ 1 giây, tắt đèn ở chân 13, rồi lại chờ 1 giây.",
+                image: "https://placehold.co/600x250/e2e8f0/4a5568?text=Code+mBlock+LED+Nhấp+Nháy"
+            },
+            code: `void setup() {\n  pinMode(13, OUTPUT); // Đặt chân 13 là đầu ra\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH); // Bật đèn LED\n  delay(1000);            // Chờ 1 giây\n  digitalWrite(13, LOW);  // Tắt đèn LED\n  delay(1000);            // Chờ 1 giây\n}`,
+            stl: null,
+        },
+        {
+            part: 1,
+            title: "Buổi 2: Đèn Giao Thông",
+            icon: "🚦",
+            description: "Điều khiển nhiều LED hoạt động tuần tự, mô phỏng cột đèn giao thông thực tế.",
+            objectives: [
+                "Điều khiển nhiều đầu ra kỹ thuật số cùng lúc.",
+                "Lập trình logic tuần tự có thứ tự.",
+                "Hiểu ứng dụng của in 3D để tạo mô hình học tập."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "LED Đỏ, Vàng, Xanh lá", qty: "1 mỗi màu" },
+                { item: "Điện trở 220Ω", qty: 3 },
+                { item: "Mô hình đèn GT (in 3D)", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+3+LED",
+            mblock: {
+                description: "Trong vòng lặp mãi mãi, chương trình tuần tự bật đèn Xanh (5s), rồi đèn Vàng (2s), rồi đèn Đỏ (5s), và lặp lại chu trình.",
+                image: "https://placehold.co/600x400/e2e8f0/4a5568?text=Code+mBlock+Đèn+Giao+Thông"
+            },
+            code: `void setup() {\n  pinMode(11, OUTPUT); // Đèn đỏ\n  pinMode(12, OUTPUT); // Đèn vàng\n  pinMode(13, OUTPUT); // Đèn xanh\n}\n\nvoid loop() {\n  // Xanh bật, Đỏ Vàng tắt\n  digitalWrite(13, HIGH);\n  digitalWrite(11, LOW);\n  digitalWrite(12, LOW);\n  delay(5000);\n\n  // Vàng bật, Xanh Đỏ tắt\n  digitalWrite(13, LOW);\n  digitalWrite(12, HIGH);\n  delay(2000);\n\n  // Đỏ bật, Vàng Xanh tắt\n  digitalWrite(12, LOW);\n  digitalWrite(11, HIGH);\n  delay(5000);\n}`,
+            stl: { name: "Mô hình đèn giao thông", url: "https://www.thingiverse.com/thing:9786" }
+        },
+        {
+            part: 1,
+            title: "Buổi 3: Nút Nhấn & Đèn",
+            icon: "🔘",
+            description: "Tương tác với Arduino lần đầu tiên qua nút nhấn để bật/tắt đèn.",
+            objectives: [
+                "Hiểu khái niệm đầu vào kỹ thuật số (digital input).",
+                "Sử dụng câu lệnh điều kiện `if-else`.",
+                "Làm quen với biến để lưu trạng thái."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Đèn LED", qty: 1 },
+                { item: "Nút nhấn 4 chân", qty: 1 },
+                { item: "Điện trở 220Ω", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Nút+nhấn",
+            mblock: {
+                description: "Sử dụng khối `if-else` để kiểm tra trạng thái của nút nhấn. Nếu nút được nhấn, bật đèn. Nếu không, tắt đèn.",
+                image: "https://placehold.co/600x300/e2e8f0/4a5568?text=Code+mBlock+Nút+Nhấn"
+            },
+            code: `const int nutNhanPin = 2;\nconst int ledPin = 13;\n\nint trangThaiNut = 0;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  pinMode(nutNhanPin, INPUT);\n}\n\nvoid loop() {\n  trangThaiNut = digitalRead(nutNhanPin);\n  if (trangThaiNut == HIGH) {\n    digitalWrite(ledPin, HIGH);\n  } else {\n    digitalWrite(ledPin, LOW);\n  }\n}`,
+            stl: null,
+        },
+        {
+            part: 1,
+            title: "Buổi 4: Game Phản Xạ",
+            icon: "⚡️",
+            description: "Làm một trò chơi đơn giản kiểm tra tốc độ phản xạ của người chơi.",
+            objectives: [
+                "Sử dụng hàm tạo số ngẫu nhiên `random()`.",
+                "Dùng biến để tính điểm và lưu thời gian.",
+                "Xây dựng một vòng lặp game hoàn chỉnh."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Đèn LED", qty: 1 },
+                { item: "Nút nhấn", qty: 1 },
+                { item: "Còi Buzzer", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Game+Phản+Xạ",
+            mblock: {
+                description: "Chương trình chờ một khoảng thời gian ngẫu nhiên, sau đó bật đèn. Người chơi phải nhấn nút càng nhanh càng tốt. Chương trình sẽ tính và hiển thị thời gian phản xạ.",
+                image: "https://placehold.co/600x350/e2e8f0/4a5568?text=Code+mBlock+Game+Phản+Xạ"
+            },
+            code: `// Code for reaction game\n// (Full code is complex, this is a simplified concept)\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(13, OUTPUT); // LED\n  pinMode(2, INPUT); // Button\n}\n\nvoid loop() {\n  digitalWrite(13, LOW);\n  delay(random(1000, 5000)); // Wait random time\n  digitalWrite(13, HIGH); // Light up!\n  // Add logic to check for button press\n  while(digitalRead(2) == LOW) {\n    // wait\n  }\n  Serial.println("You pressed it!");\n  delay(1000);\n}`,
+            stl: null,
+        },
+        {
+            part: 1,
+            title: "Buổi 5: Báo Động Vật Cản",
+            icon: "🔊",
+            description: "Sử dụng cảm biến siêu âm để phát hiện vật cản và phát ra âm thanh cảnh báo.",
+            objectives: [
+                "Hiểu nguyên lý hoạt động của cảm biến siêu âm HC-SR04.",
+                "Lập trình theo nguyên tắc Sense-Think-Act (Cảm nhận - Suy nghĩ - Hành động).",
+                "Điều khiển còi buzzer để phát âm thanh."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Cảm biến HC-SR04", qty: 1 },
+                { item: "Còi Buzzer", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+HC-SR04",
+            mblock: {
+                description: "Sử dụng khối đọc cảm biến siêu âm để lấy khoảng cách. Nếu khoảng cách nhỏ hơn một ngưỡng (ví dụ 20cm), bật còi báo động.",
+                image: "https://placehold.co/600x300/e2e8f0/4a5568?text=Code+mBlock+Báo+Động"
+            },
+            code: `const int trigPin = 9;\nconst int echoPin = 10;\nconst int buzzerPin = 11;\n\nlong duration;\nint distance;\n\nvoid setup() {\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n  pinMode(buzzerPin, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(trigPin, LOW);\n  delayMicroseconds(2);\n  digitalWrite(trigPin, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(trigPin, LOW);\n  duration = pulseIn(echoPin, HIGH);\n  distance = duration * 0.034 / 2;\n  if (distance < 20) {\n    digitalWrite(buzzerPin, HIGH);\n  } else {\n    digitalWrite(buzzerPin, LOW);\n  }\n  delay(100);\n}`,
+            stl: { name: "Giá đỡ cảm biến HC-SR04", url: "https://www.thingiverse.com/thing:466365" }
+        },
+        // PART 2
+        {
+            part: 2,
+            title: "Buổi 6: Cảm Biến Từ",
+            icon: "🚪",
+            description: "Xây dựng hệ thống báo động mở cửa bằng cảm biến từ và nam châm.",
+            objectives: [
+                "Hiểu nguyên lý của công tắc từ (reed switch).",
+                "Củng cố kỹ năng dùng lệnh `if-else` cho ứng dụng an ninh.",
+                "Xây dựng một hệ thống hoàn chỉnh có trạng thái (báo động/an toàn)."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Cảm biến từ (Module)", qty: 1 },
+                { item: "Nam châm", qty: 1 },
+                { item: "Còi Buzzer", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Cảm+biến+từ",
+            mblock: {
+                description: "Đọc trạng thái của cảm biến từ. Nếu cảm biến ở trạng thái 'mở' (không có nam châm), bật còi báo động.",
+                image: "https://placehold.co/600x300/e2e8f0/4a5568?text=Code+mBlock+Cảm+Biến+Từ"
+            },
+            code: `const int reedPin = 2;\nconst int buzzerPin = 8;\n\nvoid setup() {\n  pinMode(reedPin, INPUT_PULLUP);\n  pinMode(buzzerPin, OUTPUT);\n}\n\nvoid loop() {\n  // Khi không có nam châm, cảm biến ở mức HIGH\n  if (digitalRead(reedPin) == HIGH) {\n    digitalWrite(buzzerPin, HIGH);\n  } else {\n    digitalWrite(buzzerPin, LOW);\n  }\n}`,
+            stl: null,
+        },
+        {
+            part: 2,
+            title: "Buổi 7: Cảm Biến Nhiệt Độ, Độ Ẩm",
+            icon: "🌡️",
+            description: "Đọc dữ liệu nhiệt độ và độ ẩm từ môi trường bằng cảm biến DHT11.",
+            objectives: [
+                "Làm quen với khái niệm thư viện (library) trong Arduino.",
+                "Cài đặt và sử dụng thư viện DHT.",
+                "Đọc và hiển thị dữ liệu từ cảm biến lên Serial Monitor."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Cảm biến DHT11 (Module)", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+DHT11",
+            mblock: {
+                description: "Sử dụng phần mở rộng (extension) DHT11, đọc giá trị nhiệt độ và độ ẩm, sau đó dùng khối `print` để hiển thị chúng.",
+                image: "https://placehold.co/600x300/e2e8f0/4a5568?text=Code+mBlock+DHT11"
+            },
+            code: `#include "DHT.h"\n\n#define DHTPIN 2\n#define DHTTYPE DHT11\n\nDHT dht(DHTPIN, DHTTYPE);\n\nvoid setup() {\n  Serial.begin(9600);\n  dht.begin();\n}\n\nvoid loop() {\n  delay(2000);\n  float h = dht.readHumidity();\n  float t = dht.readTemperature();\n\n  if (isnan(h) || isnan(t)) {\n    Serial.println("Failed to read from DHT sensor!");\n    return;\n  }\n\n  Serial.print("Humidity: ");\n  Serial.print(h);\n  Serial.print("%  Temperature: ");\n  Serial.print(t);\n  Serial.println("°C");\n}`,
+            stl: null,
+        },
+        {
+            part: 2,
+            title: "Buổi 8: Tưới Cây Thông Minh",
+            icon: "�",
+            description: "Chế tạo một hệ thống tự động tưới cây khi đất bị khô.",
+            objectives: [
+                "Hiểu khái niệm đầu vào tương tự (analog input) để đọc giá trị liên tục.",
+                "Điều khiển một động cơ (máy bơm mini) thông qua relay hoặc transistor.",
+                "Tích hợp cảm biến và cơ cấu chấp hành thành một hệ thống tự động."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Cảm biến độ ẩm đất", qty: 1 },
+                { item: "Máy bơm nước mini 5V", qty: 1 },
+                { item: "Module Relay 1 kênh", qty: 1 },
+                { item: "Ống nước", qty: "1 đoạn" }
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Tưới+cây",
+            mblock: {
+                description: "Đọc giá trị từ cảm biến độ ẩm đất (chân Analog). Nếu giá trị cho thấy đất khô (ví dụ > 700), bật relay để chạy máy bơm.",
+                image: "https://placehold.co/600x300/e2e8f0/4a5568?text=Code+mBlock+Tưới+Cây"
+            },
+            code: `const int soilPin = A0; // Cảm biến đất\nconst int pumpPin = 7;  // Relay điều khiển bơm\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(pumpPin, OUTPUT);\n  digitalWrite(pumpPin, HIGH); // Tắt relay ban đầu\n}\n\nvoid loop() {\n  int soilValue = analogRead(soilPin);\n  Serial.print("Soil Moisture = ");\n  Serial.println(soilValue);\n\n  // Giá trị ngưỡng cần được hiệu chỉnh, giả sử > 700 là khô\n  if (soilValue > 700) {\n    digitalWrite(pumpPin, LOW); // Bật relay -> Bật bơm\n  } else {\n    digitalWrite(pumpPin, HIGH); // Tắt relay -> Tắt bơm\n  }\n  delay(1000);\n}`,
+            stl: null,
+        },
+        {
+            part: 2,
+            title: "Buổi 9: Game Ghi Nhớ",
+            icon: "🧠",
+            description: "Lập trình game 'Simon Says' kinh điển để thử thách trí nhớ với chuỗi âm thanh và ánh sáng.",
+            objectives: [
+                "Hiểu và sử dụng cấu trúc dữ liệu mảng (array).",
+                "Lập trình các vòng lặp phức tạp để so sánh input của người chơi.",
+                "Phát triển tư duy thuật toán để xây dựng logic game."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "LED (4 màu)", qty: 4 },
+                { item: "Nút nhấn", qty: 4 },
+                { item: "Còi Buzzer", qty: 1 },
+                { item: "Điện trở 220Ω", qty: 4 }
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Game+Simon",
+            mblock: {
+                description: "Tạo một chuỗi ngẫu nhiên và lưu vào một danh sách (mảng). Hiển thị chuỗi bằng đèn và còi. Sau đó, chờ người chơi nhập lại chuỗi bằng nút nhấn và so sánh.",
+                image: "https://placehold.co/600x400/e2e8f0/4a5568?text=Code+mBlock+Game+Simon"
+            },
+            code: `// Simon Says Game Logic\n// This is complex and requires arrays, which is advanced for a snippet.\n// The core idea is to have an array for the sequence:\n// int sequence[100];\n// int level = 0;\n\nvoid loop() {\n  // Add a new random step to sequence\n  // Display the sequence to the player\n  // For each step in the sequence:\n  //   Wait for player input\n  //   If input is wrong, game over\n  // If player completes sequence, increment level\n}`,
+            stl: null,
+        },
+        {
+            part: 2,
+            title: "Buổi 10: Trạm Khí Tượng Mini",
+            icon: "🛰️",
+            description: "Hiển thị dữ liệu nhiệt độ, độ ẩm lên màn hình LCD.",
+            objectives: [
+                "Hiểu về giao thức giao tiếp I2C.",
+                "Sử dụng thư viện để điều khiển màn hình LCD I2C.",
+                "Tạo một sản phẩm hiển thị thông tin hoàn chỉnh."
+            ],
+            materials: [
+                { item: "Arduino Uno R3", qty: 1 },
+                { item: "Cảm biến DHT11", qty: 1 },
+                { item: "Màn hình LCD 16x2 I2C", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+LCD+I2C",
+            mblock: {
+                description: "Sử dụng extension cho LCD I2C và DHT11. Đọc dữ liệu từ cảm biến và dùng các khối lệnh của LCD để hiển thị thông tin lên màn hình.",
+                image: "https://placehold.co/600x350/e2e8f0/4a5568?text=Code+mBlock+Trạm+Khí+Tượng"
+            },
+            code: `#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n#include "DHT.h"\n\n// Khởi tạo các đối tượng\nLiquidCrystal_I2C lcd(0x27, 16, 2);\nDHT dht(2, DHT11);\n\nvoid setup() {\n  lcd.init();\n  lcd.backlight();\n  dht.begin();\n}\n\nvoid loop() {\n  float h = dht.readHumidity();\n  float t = dht.readTemperature();\n\n  lcd.setCursor(0, 0);\n  lcd.print("Nhiet do: ");\n  lcd.print(t);\n  lcd.print("C");\n\n  lcd.setCursor(0, 1);\n  lcd.print("Do am:    ");\n  lcd.print(h);\n  lcd.print("%");\n  delay(2000);\n}`,
+            stl: null,
+        },
+        // PART 3
+        {
+            part: 3,
+            title: "Buổi 11: Xe Tránh Vật Cản",
+            icon: "🚗",
+            description: "Chế tạo robot tự hành đầu tiên có khả năng tự né các vật cản.",
+            objectives: [
+                "Hiểu vai trò của module điều khiển động cơ L298N.",
+                "Lắp ráp hoàn chỉnh một khung xe robot 2 bánh.",
+                "Tích hợp cảm biến siêu âm để robot có khả năng tự hành."
+            ],
+            materials: [
+                { item: "Khung xe robot 2 bánh", qty: 1 },
+                { item: "Module L298N", qty: 1 },
+                { item: "Cảm biến HC-SR04", qty: 1 },
+                { item: "Hộp pin AA (4-6 pin)", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Xe+Robot",
+            mblock: {
+                description: "Đọc khoảng cách từ cảm biến siêu âm. Nếu khoảng cách nhỏ hơn 20cm, điều khiển động cơ để lùi lại và rẽ. Nếu không, cho xe đi thẳng.",
+                image: "https://placehold.co/600x350/e2e8f0/4a5568?text=Code+mBlock+Xe+Tránh+Vật+Cản"
+            },
+            code: `// Chân động cơ phải\nconst int enA = 5; const int in1 = 4; const int in2 = 3;\n// Chân động cơ trái\nconst int enB = 6; const int in3 = 2; const int in4 = 7;\n\nvoid setup() {\n  //...cấu hình các chân OUTPUT...\n}\n\nvoid loop() {\n  //...đọc cảm biến siêu âm...\n  int distance = readUltrasonicDistance();\n  if (distance < 20) {\n    moveBackward();\n    delay(500);\n    turnRight();\n    delay(500);\n  } else {\n    moveForward();\n  }\n}\n\n//... các hàm moveForward(), moveBackward()...`,
+            stl: null
+        },
+        {
+            part: 3,
+            title: "Buổi 12: Robot Dò Line",
+            icon: "🛣️",
+            description: "Lập trình cho robot đi theo một vạch kẻ đen trên nền trắng.",
+            objectives: [
+                "Hiểu nguyên lý hoạt động của cảm biến dò line hồng ngoại.",
+                "Lập trình thuật toán dò line đơn giản.",
+                "Hiệu chỉnh cảm biến và tinh chỉnh thuật toán để robot chạy mượt mà."
+            ],
+            materials: [
+                { item: "Robot từ buổi 11", qty: 1 },
+                { item: "Module cảm biến dò line (2 mắt)", qty: 1 },
+                { item: "Băng dính đen", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Dò+line",
+            mblock: {
+                description: "Đọc trạng thái của 2 cảm biến dò line. Dựa trên việc cảm biến nào thấy vạch đen, điều khiển động cơ để đi thẳng, rẽ trái hoặc rẽ phải.",
+                image: "https://placehold.co/600x400/e2e8f0/4a5568?text=Code+mBlock+Robot+Dò+Line"
+            },
+            code: `const int leftSensor = 10;\nconst int rightSensor = 11;\n\nvoid loop() {\n  int leftState = digitalRead(leftSensor);\n  int rightState = digitalRead(rightSensor);\n\n  if (leftState == HIGH && rightState == HIGH) {\n    moveForward();\n  } else if (leftState == LOW) {\n    turnLeft();\n  } else if (rightState == LOW) {\n    turnRight();\n  }\n}`,
+            stl: { name: "Giá đỡ cảm biến dò line", url: "https://www.thingiverse.com/thing:2468842" }
+        },
+        {
+            part: 3,
+            title: "Buổi 13: Robot Họa Sĩ",
+            icon: "✍️",
+            description: "Gắn thêm một cây bút và điều khiển nó bằng động cơ servo để vẽ các hình đơn giản.",
+            objectives: [
+                "Hiểu nguyên lý và cách điều khiển động cơ servo.",
+                "Lập trình các chuỗi chuyển động kết hợp để tạo ra hình vẽ.",
+                "Khám phá sự giao thoa giữa nghệ thuật và kỹ thuật."
+            ],
+            materials: [
+                { item: "Robot từ buổi 11", qty: 1 },
+                { item: "Động cơ Servo SG90", qty: 1 },
+                { item: "Cơ cấu giữ bút (in 3D)", qty: 1 },
+                { item: "Bút lông", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Robot+vẽ",
+            mblock: {
+                description: "Sử dụng khối điều khiển servo để nâng/hạ bút. Kết hợp với các khối điều khiển động cơ để di chuyển robot theo một quỹ đạo (ví dụ hình vuông) để vẽ.",
+                image: "https://placehold.co/600x350/e2e8f0/4a5568?text=Code+mBlock+Robot+Họa+Sĩ"
+            },
+            code: `#include <Servo.h>\n\nServo penServo;\n\nvoid setup() {\n  penServo.attach(9);\n  penUp();\n}\n\nvoid loop() {\n  drawSquare();\n  while(true);\n}\n\nvoid penUp() { penServo.write(90); delay(500); }\nvoid penDown() { penServo.write(0); delay(500); }\n\nvoid drawSquare() {\n  penDown();\n  for (int i=0; i<4; i++) {\n    moveForward(1000);\n    turnRight(500);\n  }\n  penUp();\n}`,
+            stl: { name: "Cơ cấu giữ bút cho robot", url: "https://www.thingiverse.com/thing:1398315" }
+        },
+        {
+            part: 3,
+            title: "Buổi 14: Xe Điều Khiển Bluetooth",
+            icon: "📱",
+            description: "Điều khiển robot không dây từ điện thoại thông minh qua sóng Bluetooth.",
+            objectives: [
+                "Hiểu về giao tiếp Serial qua Bluetooth.",
+                "Kết nối module Bluetooth HC-06 với Arduino.",
+                "Lập trình nhận và xử lý lệnh từ ứng dụng điện thoại."
+            ],
+            materials: [
+                { item: "Robot từ buổi 11", qty: 1 },
+                { item: "Module Bluetooth HC-06", qty: 1 },
+                { item: "Điện thoại Android", qty: 1 },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Bluetooth",
+            mblock: {
+                description: "Chương trình đọc dữ liệu gửi đến từ Bluetooth. Sử dụng các khối `if` để kiểm tra ký tự nhận được ('F', 'B', 'L', 'R') và điều khiển động cơ tương ứng.",
+                image: "https://placehold.co/600x400/e2e8f0/4a5568?text=Code+mBlock+Xe+Bluetooth"
+            },
+            code: `char command;\n\nvoid setup() {\n  Serial.begin(9600);\n  // ... pinModes for motors ...\n}\n\nvoid loop() {\n  if (Serial.available() > 0) {\n    command = Serial.read();\n    switch(command) {\n      case 'F': moveForward(); break;\n      case 'B': moveBackward(); break;\n      case 'L': turnLeft(); break;\n      case 'R': turnRight(); break;\n      case 'S': stopRobot(); break;\n    }\n  }\n}`,
+            stl: { name: "Vỏ hộp cho module Bluetooth", url: "https://www.thingiverse.com/thing:920561" }
+        },
+        {
+            part: 3,
+            title: "Buổi 15: Cánh Tay Robot & Showcase",
+            icon: "🦾",
+            description: "Dự án cuối khóa: chế tạo một cánh tay robot và trình bày sản phẩm sáng tạo nhất của bạn.",
+            objectives: [
+                "Điều khiển đồng thời nhiều động cơ servo.",
+                "Lắp ráp một cơ cấu cơ khí phức tạp.",
+                "Rèn luyện kỹ năng thuyết trình, trình bày sản phẩm."
+            ],
+            materials: [
+                { item: "Bộ kit Cánh tay Robot (in 3D)", qty: 1 },
+                { item: "Động cơ Servo SG90", qty: "3-4" },
+                { item: "Biến trở", qty: "2-3 (tùy chọn)" },
+            ],
+            diagram: "https://placehold.co/600x400/e2e8f0/4a5568?text=Sơ+đồ+Cánh+tay+Robot",
+            mblock: {
+                description: "Điều khiển nhiều servo cùng lúc để tạo ra một chuỗi hành động phức tạp, ví dụ như gắp một vật thể từ vị trí này và di chuyển đến vị trí khác.",
+                image: "https://placehold.co/600x400/e2e8f0/4a5568?text=Code+mBlock+Cánh+Tay+Robot"
+            },
+            code: `#include <Servo.h>\n\nServo baseServo, armServo, clawServo;\n\nvoid setup() {\n  baseServo.attach(9);\n  armServo.attach(10);\n  clawServo.attach(11);\n}\n\nvoid loop() {\n  // Kịch bản gắp và thả\n  // ... di chuyển các servo đến vị trí mong muốn ...\n  delay(5000);\n}`,
+            stl: { name: "Cánh tay robot EEZYbotARM", url: "https://www.thingiverse.com/thing:1015238" }
+        },
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const contentContainer = document.getElementById('curriculum-content');
+        
+        const parts = curriculumData.reduce((acc, lesson) => {
+            (acc[lesson.part] = acc[lesson.part] || []).push(lesson);
+            return acc;
+        }, {});
+
+        const partTitles = {
+            1: "Phần 1: Nền tảng & Điện tử Cơ bản",
+            2: "Phần 2: Khám phá Cảm biến & Logic Nâng cao",
+            3: "Phần 3: Chế tạo Robot & Dự án Tích hợp"
+        };
+        
+        for (const partNumber in parts) {
+            const section = document.createElement('section');
+            section.id = `part${partNumber}`;
+            section.className = "mb-16";
+
+            const sectionTitle = document.createElement('h2');
+            sectionTitle.className = "text-3xl font-bold text-gray-700 border-l-4 border-teal-500 pl-4 mb-8";
+            sectionTitle.textContent = partTitles[partNumber];
+            section.appendChild(sectionTitle);
+
+            const grid = document.createElement('div');
+            grid.className = "grid md:grid-cols-2 lg:grid-cols-3 gap-8";
+
+            parts[partNumber].forEach(lesson => {
+                const cardWrapper = document.createElement('div');
+                cardWrapper.innerHTML = createCardHTML(lesson);
+                grid.appendChild(cardWrapper);
+            });
+            
+            section.appendChild(grid);
+            contentContainer.appendChild(section);
+        }
+        
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                 if (e.target.tagName === 'A' || e.target.closest('.copy-btn')) {
+                    return;
+                }
+
+                const currentActiveCard = document.querySelector('.project-card.active');
+                if (currentActiveCard && currentActiveCard !== card) {
+                    currentActiveCard.classList.remove('active');
+                    currentActiveCard.nextElementSibling.classList.remove('open');
+                }
+
+                card.classList.toggle('active');
+                const details = card.nextElementSibling;
+                if (details.classList.contains('open')) {
+                    details.classList.remove('open');
+                } else {
+                    details.classList.add('open');
+                }
+            });
+        });
+        
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const pre = button.parentElement;
+                const code = pre.querySelector('code').innerText;
+                navigator.clipboard.writeText(code).then(() => {
+                    button.innerText = 'Đã sao chép!';
+                    setTimeout(() => {
+                        button.innerText = 'Copy';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+        });
+
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    });
+    
+    function createCardHTML(lesson) {
+        return `
+            <div class="project-card bg-white rounded-lg border-2 border-transparent cursor-pointer overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-start justify-between">
+                        <h3 class="text-xl font-bold text-gray-800">${lesson.title}</h3>
+                        <span class="text-3xl ml-4">${lesson.icon}</span>
+                    </div>
+                    <p class="text-gray-600 mt-2">${lesson.description}</p>
+                </div>
+            </div>
+            <div class="details-panel bg-white -mt-2 rounded-b-lg border-x-2 border-b-2 border-gray-200">
+                <h4 class="font-bold text-lg mb-2 text-teal-700">🎯 Mục tiêu</h4>
+                <ul class="list-disc list-inside mb-4 text-gray-700 space-y-1">
+                    ${lesson.objectives.map(obj => `<li>${obj}</li>`).join('')}
+                </ul>
+                
+                <h4 class="font-bold text-lg mb-2 text-teal-700">🛠️ Vật tư cần thiết</h4>
+                <ul class="list-disc list-inside mb-4 text-gray-700 space-y-1">
+                    ${lesson.materials.map(mat => `<li><b>${mat.qty}x</b> ${mat.item}</li>`).join('')}
+                </ul>
+                
+                <h4 class="font-bold text-lg mb-2 text-teal-700">⚡ Sơ đồ mạch</h4>
+                <div class="mb-4 chart-container bg-gray-100 rounded-md flex items-center justify-center">
+                    <img src="${lesson.diagram}" alt="Sơ đồ mạch cho ${lesson.title}" class="max-w-full max-h-full object-contain rounded-md">
+                </div>
+                
+                ${lesson.stl ? `
+                <h4 class="font-bold text-lg mb-2 text-teal-700">🖨️ File in 3D</h4>
+                <div class="mb-4">
+                    <a href="${lesson.stl.url}" target="_blank" class="text-teal-600 hover:underline hover:text-teal-800 transition">Tải về: ${lesson.stl.name} &rarr;</a>
+                </div>
+                ` : ''}
+
+                <h4 class="font-bold text-lg mb-2 text-teal-700">💻 Mã lập trình (mBlock)</h4>
+                <p class="text-gray-600 mb-2 text-sm">${lesson.mblock.description}</p>
+                <div class="mb-4 bg-gray-100 rounded-md flex items-center justify-center p-4">
+                    <img src="${lesson.mblock.image}" alt="Code mBlock cho ${lesson.title}" class="max-w-full max-h-full object-contain rounded-md">
+                </div>
+
+                <h4 class="font-bold text-lg mb-2 text-teal-700">📝 Mã lập trình (Arduino C++)</h4>
+                <pre><button class="copy-btn">Copy</button><code>${lesson.code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+            </div>
+        `;
+    }
+
+    </script>
+</body>
+</html>
+�
